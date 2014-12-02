@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.path="$MODULE_DIR$">
+  <component name="NewModuleRootManager">
+    <orderEntry type="jdk" jdkName="Android API 19 Platform" jdkType="Android SDK" />
+    <orderEntry type="library" exported="" scope="TEST" name="robolectric-2.4" level="project" />
+  </component>
+</module>
+
