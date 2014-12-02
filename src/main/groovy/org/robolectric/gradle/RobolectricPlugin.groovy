@@ -190,7 +190,7 @@ class RobolectricPlugin implements Plugin<Project> {
             testTask.reportOn testRunTask
 
             // add dependency so tests can be run from IDE without having to manually build test classes
-            project.tasks.findByName("assembleDebug").dependsOn("testDebugClasses")
+            project.tasks.findByName("assembleDebug").dependsOn("test" + variationName + "Classes")
 
         }         
 
