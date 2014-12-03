@@ -1,6 +1,9 @@
 package org.robolectric.gradle
 
+import com.google.common.io.Files
+import org.gradle.api.Action
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.ProjectConfigurationException
 import org.gradle.api.internal.plugins.PluginApplicationException
 import org.gradle.testfixtures.ProjectBuilder
@@ -112,6 +115,14 @@ class RobolectricPluginTest {
         project.evaluate()
 
         assertThat(project.tasks.testDebug).isInstanceOf(org.gradle.api.tasks.testing.Test)
+    }
+
+    @Test
+    public void validateTestDebugClassesDependency() {
+        Project project = evaluatableProject()
+        project.evaluate()
+
+        assertThat(project.tasks.assembleDebug.getDependsOn()).contains('testDebugClasses')
     }
 
     @Test
@@ -233,7 +244,7 @@ class RobolectricPluginTest {
     }
 
     @Test
-    public void supportsIngoreFailures() {
+    public void supportsIgnoreFailures() {
         Project project = evaluatableProject()
         project.robolectric {
             ignoreFailures true
@@ -268,12 +279,12 @@ class RobolectricPluginTest {
             mavenCentral()
         }
         project.dependencies {
-            androidTestCompile 'junit:junit:4.8'
+            androidTestCompile 'junit:junit:4.10'
         }
         project.evaluate()
 
         assertThat(project.tasks.compileTestDebugJava.classpath.files.find {
-            it.absolutePath.contains("junit${File.separator}junit${File.separator}4.8")
+            it.absolutePath.contains("junit${File.separator}junit${File.separator}4.10")
         }).isNotNull()
     }
 
@@ -322,8 +333,24 @@ class RobolectricPluginTest {
 
     @Test
     public void pluginAcceptsSupportedAndroidPlugin() {
-        Project project = evaluatableProjectWithAndroidVersion('com.android.tools.build:gradle:0.14.0')
+        Project project = evaluatableProjectWithAndroidVersion('com.android.tools.build:gradle:1.0.0-rc1');
         project.evaluate()
+    }
+
+    @Test
+    public void pluginShouldFixImlIssues() {
+        Files.copy(new File('src/test/resources/test.iml'), new File("src/test/fixtures/android_app/test.iml"))
+
+        Project project = evaluatableProject();
+        project.evaluate()
+
+        assertThat(project.tasks.preBuild.getDependsOn()).contains('initGradleTest')
+
+        project.tasks.initGradleTest.actions.each { Action<? super Task> action ->
+            action.execute(project.tasks.initGradleTest)
+        }
+        assertThat(new File("src/test/fixtures/android_app/test.iml"))
+            .hasContentEqualTo(new File("src/test/resources/test-expected.iml"))
     }
 
     private Project evaluatableProject() {

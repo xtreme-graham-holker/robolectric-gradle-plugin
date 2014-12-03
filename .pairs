@@ -1,0 +1,7 @@
+# .pairs - configuration for 'git pair'
+pairs:
+  gh: Graham Holker; gholker
+  nz: Nader Ziada; nziada
+email:
+  prefix: pair
+  domain: pivotallabs.com

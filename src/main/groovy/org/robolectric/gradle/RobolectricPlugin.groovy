@@ -155,7 +155,7 @@ class RobolectricPlugin implements Plugin<Project> {
             }
 
             // Work around http://issues.gradle.org/browse/GRADLE-1682
-            testRunTask.scanForTestClasses = false
+            //testRunTask.scanForTestClasses = false
 
             // Set the applicationId as the packageName to avoid unknown resource errors when
             // applicationIdSuffix is used.
@@ -188,7 +188,46 @@ class RobolectricPlugin implements Plugin<Project> {
             testRunTask.ignoreFailures = extension.ignoreFailures
 
             testTask.reportOn testRunTask
+
+            // add dependency so tests can be run from IDE without having to manually build test classes
+            project.tasks.findByName("assembleDebug").dependsOn("test" + variationName + "Classes")
+
+        }         
+
+        // workaround for Android Studio/IntelliJ to change order of libraries in iml project file
+        project.task('initGradleTest') << {
+            def imlFile = new File(project.projectDir, project.name + '.iml')
+            
+            if(imlFile.exists()){
+                def parse = new XmlParser().parse(imlFile)
+
+                def modulePath = parse.@'external.linked.project.path'
+
+                // It's Robolectric Default ouputPath
+                def outputTestPath = "file://$modulePath/build/test-classes"
+                def moduleComponent = parse.component.find { it.@name == 'NewModuleRootManager' }
+                def outputTest = moduleComponent.find {it.name() == 'output-test'}
+
+                if (outputTest != null) {
+                    outputTest.@url = outputTestPath
+                } else {
+                    moduleComponent.appendNode('output-test', [url : outputTestPath])
+                }
+
+                // jdk orderEntry must be last
+                def orderEntry = moduleComponent.orderEntry
+                def jdkOrderEntry = orderEntry.find { it.@type == 'jdk' }
+                moduleComponent.remove(jdkOrderEntry)
+                moduleComponent.append(jdkOrderEntry)
+
+                // rewrite $project.iml file
+                FileWriter fileWriter = new FileWriter(imlFile)
+                new XmlNodePrinter(new PrintWriter(fileWriter)).print(parse) 
+            }
         }
+
+        project.tasks.preBuild.dependsOn("initGradleTest")
+
     }
 
     static boolean checkAndroidVersion(String version) {

@@ -1,0 +1,7 @@
+<module external.linked.project.path="$MODULE_DIR$">
+  <component name="NewModuleRootManager">
+    <orderEntry type="library" exported="" scope="TEST" name="robolectric-2.4" level="project"/>
+    <output-test url="file://$MODULE_DIR$/build/test-classes"/>
+    <orderEntry type="jdk" jdkName="Android API 19 Platform" jdkType="Android SDK"/>
+  </component>
+</module>
