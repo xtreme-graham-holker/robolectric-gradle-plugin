@@ -1,11 +1,11 @@
 package org.robolectric.gradle
 
 import com.android.build.gradle.api.TestVariant
-import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Task
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.tasks.DefaultSourceSet
+import org.gradle.api.logging.Logger
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.compile.JavaCompile
@@ -17,7 +17,9 @@ class TestTask extends TestReport {
     private static final String TEST_TASK_NAME = 'test'
     private static final String TEST_REPORT_DIR = 'test-report'
     private static final String TEST_CLASSES_DIR = 'test-classes'
+    private static final String[] SUPPORTED_ANDROID_VERSIONS = ['0.14.', '1.0.']
 
+    private static Logger logger
     private AndroidPluginWrapper androidPlugin
     private FileCollection testCompileClasspath
     private FileCollection testRunClasspath
@@ -33,25 +35,39 @@ class TestTask extends TestReport {
 
     public TestTask() {
         super()
+        logger = project.getLogger()
+
         destinationDir = project.file("$project.buildDir/$TEST_REPORT_DIR")
         description = 'Runs all unit tests.'
         group = JavaBasePlugin.VERIFICATION_GROUP
         project.tasks.check.dependsOn this
 
-        androidPlugin = new AndroidPluginWrapper(project)
+        createSubTasks()
     }
 
-    void createSubTasks(variant) {
+    void createSubTasks() {
 
-        // Get the build type name (e.g., "Debug", "Release").
-        def buildTypeName = variant.buildType.name.capitalize()
+        androidPlugin = new AndroidPluginWrapper(project)
+        androidPlugin.variants.all { variant ->
 
-        setupPath(variant)
-        setupClasses(variant)
-        setupSources(buildTypeName)
+            def androidGradlePlugin = project.buildscript.configurations.classpath.dependencies.find {
+                it.group != null && it.group.equals('com.android.tools.build') && it.name.equals('gradle')
+            }
 
-        createTaskToCompileTestClasses(variant)
-        createTaskToRunTestClasses(variant)
+            if (androidGradlePlugin != null) {
+                checkAndroidVersion(androidGradlePlugin.version)
+            }
+
+            // Get the build type name (e.g., "Debug", "Release").
+            def buildTypeName = variant.buildType.name.capitalize()
+
+            setupPath(variant)
+            setupClasses(variant)
+            setupSources(buildTypeName)
+
+            createTaskToCompileTestClasses(variant)
+            createTaskToRunTestClasses(variant)
+        }
     }
 
     void createTaskToRunTestClasses(variant) {
@@ -167,5 +183,18 @@ class TestTask extends TestReport {
         processedAssetsPath = variant.mergeAssets.outputDir
     }
 
+    boolean checkAndroidVersion(String version) {
+        for (String supportedVersion : SUPPORTED_ANDROID_VERSIONS) {
+            if (version.startsWith(supportedVersion)) {
+                return true
+            }
+        }
+        if (project.extensions.getByName('robolectric').ignoreVersionCheck) {
+            logger.warn("The Android Gradle plugin ${version} is not supported.")
+            return true
+        } else {
+            throw new IllegalStateException("The Android Gradle plugin ${version} is not supported.")
+        }
+    }
 
 }
