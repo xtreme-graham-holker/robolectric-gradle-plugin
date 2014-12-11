@@ -107,8 +107,28 @@ class RobolectricTestTask extends TestReport {
         testRunClasspath = testCompileClasspath.plus testDestinationDir
 
         ArrayList flavorNames = getFlavorNames(variant)
-        variationSources.java.setSrcDirs androidPlugin.getSourceDirs(["java"], flavorNames)
-        variationSources.resources.setSrcDirs androidPlugin.getSourceDirs(["res", "resources"], flavorNames)
+        variationSources.java.setSrcDirs getSourceDirs(["java"], flavorNames)
+        variationSources.resources.setSrcDirs getSourceDirs(["res", "resources"], flavorNames)
+    }
+
+    def getSourceDirs(List<String> sourceTypes, List<String> projectFlavorNames) {
+        def dirs = []
+        sourceTypes.each { sourceType ->
+
+            String sourceDir = project.robolectric.sourceDir;
+            if (project.robolectric.sourceDir == null) {
+                sourceDir = "src/test"
+            }
+
+            dirs.add(new File(sourceDir + File.separator + sourceType))
+
+            projectFlavorNames.each { flavor ->
+                if (flavor) {
+                    dirs.add(sourceDir + flavor + File.separator + sourceType)
+                }
+            }
+        }
+        return dirs
     }
 
     void createTaskToCompileTestClasses(variant, variationName) {

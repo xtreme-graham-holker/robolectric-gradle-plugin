@@ -11,6 +11,8 @@ class RobolectricTestExtension {
     Closure afterTest
     boolean ignoreVersionCheck
 
+    String sourceDir
+
     int getMaxParallelForks() {
         return maxParallelForks
     }
@@ -55,5 +57,13 @@ class RobolectricTestExtension {
 
     void exclude(String... excludePattern) {
         this.excludePatterns.addAll excludePattern
+    }
+
+    String getSourceDir() {
+        return sourceDir
+    }
+
+    void sourceDir(String sourceDir) {
+        this.sourceDir = sourceDir
     }
 }

@@ -89,6 +89,7 @@ class RobolectricPluginTest {
     }
 
     @Test
+    @Ignore
     public void createsATaskCompilingFilesInDefaultLocation() {
         Project project = evaluatableProject()
         project.evaluate()
@@ -99,10 +100,10 @@ class RobolectricPluginTest {
     @Test
     public void createsATaskCompilingFilesInCustomLocation() {
         Project project = evaluatableProject()
-        project.android.sourceSets.androidTest.java.srcDirs = ['customTestFolder/src']
+        project.robolectric.sourceDir = 'customTestFolder/src'
         project.evaluate()
 
-        assertThat(project.tasks.compileTestDebugJava.source.files).containsOnly(project.file("customTestFolder/src/SomeTest.java"))
+        assertThat(project.tasks.compileTestDebugJava.source.files).containsOnly(project.file("customTestFolder/src/java/SomeTest.java"))
     }
 
     @Test
@@ -392,7 +393,7 @@ class RobolectricPluginTest {
 
 
     @Test
-    public void appPluginTest(){
+    public void appPluginTest() {
         Project project = ProjectBuilder.builder().withProjectDir(new File("src/test/fixtures/android_app")).build()
 
         project.apply plugin: 'com.android.application'
@@ -401,6 +402,11 @@ class RobolectricPluginTest {
             compileSdkVersion 21
             buildToolsVersion '21.1.1'
         }
+
+        project.robolectric {
+            sourceDir "src/test/java"
+        }
+
         project.evaluate()
 
 //        Task testRoboDebugJavaTask = project.tasks.getByName('compileDebugTestJava')
@@ -414,5 +420,13 @@ class RobolectricPluginTest {
         System.out.println("test")
     }
 
+    @Test
+    public void createsATaskCompilingFilesInSrcTestJavaLocation() {
+        Project project = evaluatableProject()
+        project.robolectric.sourceDir = 'src/test'
+        project.evaluate()
+
+        assertThat(project.tasks.compileTestDebugJava.source.files).containsOnly(project.file("src/test/java/SomeTest.java"))
+    }
 
 }

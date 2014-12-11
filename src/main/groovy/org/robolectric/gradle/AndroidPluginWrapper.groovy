@@ -31,19 +31,6 @@ class AndroidPluginWrapper {
         return project.plugins.find { p -> p instanceof AppPlugin }
     }
 
-    def getSourceDirs(List<String> sourceTypes, List<String> projectFlavorNames) {
-        def dirs = []
-        sourceTypes.each { sourceType ->
-            project.android.sourceSets.androidTest[sourceType].srcDirs.each { testDir ->
-                dirs.add(testDir)
-            }
-            projectFlavorNames.each { flavor ->
-                if (flavor) {
-                    dirs.addAll(project.android.sourceSets["androidTest$flavor"][sourceType].srcDirs)
-                }
-            }
-        }
-        return dirs
-    }
+
 
 }
