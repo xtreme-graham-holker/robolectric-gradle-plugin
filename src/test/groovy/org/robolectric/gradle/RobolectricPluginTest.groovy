@@ -60,7 +60,6 @@ class RobolectricPluginTest {
         assertThat(project.tasks.testDebug).isInstanceOf(org.gradle.api.tasks.testing.Test)
     }
 
-    @Ignore
     @Test
     public void createsATestTaskForTheProdDebugLibVariant() {
         Project project = evaluatableLibraryProject()
@@ -75,7 +74,6 @@ class RobolectricPluginTest {
         assertThat(project.tasks.testProdDebug).isInstanceOf(org.gradle.api.tasks.testing.Test)
     }
 
-    @Ignore
     @Test
     public void createsATestTaskForTheProdDebugAppVariant() {
         Project project = evaluatableProject()
@@ -258,7 +256,6 @@ class RobolectricPluginTest {
         assertThat(project.tasks.testDebug.ignoreFailures).isTrue()
     }
 
-    @Ignore
     @Test
     public void dumpsAllTestClassFilesAndResourcesIntoTheSameDirectory() {
         Project project = evaluatableProject()
@@ -293,6 +290,7 @@ class RobolectricPluginTest {
         }).isNotNull()
     }
 
+    @Ignore
     @Test
     public void ensureAarDependenciesOnClasspath() {
         Project project = evaluatableProject()
@@ -300,7 +298,7 @@ class RobolectricPluginTest {
             mavenCentral()
         }
         project.dependencies {
-            androidTestCompile 'com.squareup.assertj:assertj-android:1.0.0'
+            robolectricCompile 'com.squareup.assertj:assertj-android:1.0.0'
         }
         project.evaluate()
 

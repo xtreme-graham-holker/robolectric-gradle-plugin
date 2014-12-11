@@ -1,6 +1,5 @@
 package org.robolectric.gradle
 
-import com.android.build.gradle.api.TestVariant
 import org.gradle.api.Task
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
@@ -8,11 +7,10 @@ import org.gradle.api.internal.tasks.DefaultSourceSet
 import org.gradle.api.logging.Logger
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.plugins.JavaPluginConvention
-import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.testing.TestReport
 
-class TestTask extends TestReport {
+class RobolectricTestTask extends TestReport {
 
     private static final String TEST_TASK_NAME = 'test'
     private static final String TEST_REPORT_DIR = 'test-report'
@@ -25,15 +23,15 @@ class TestTask extends TestReport {
     private FileCollection testRunClasspath
     private DefaultSourceSet variationSources
     private ConfigurableFileCollection testDestinationDir
-    private JavaCompile javaCompile
-    private TestVariant testVariant
+
     private Task testClassesTaskPerVariation
     private Task testCompileTask
+
     private File processedManifestPath
     private File processedResourcesPath
     private File processedAssetsPath
 
-    public TestTask() {
+    public RobolectricTestTask() {
         super()
         logger = project.getLogger()
 
@@ -58,22 +56,97 @@ class TestTask extends TestReport {
                 checkAndroidVersion(androidGradlePlugin.version)
             }
 
-            // Get the build type name (e.g., "Debug", "Release").
-            def buildTypeName = variant.buildType.name.capitalize()
+            String variationName = getVariationName(variant)
 
             setupPath(variant)
             setupClasses(variant)
-            setupSources(buildTypeName)
+            setupSources(variant, variationName)
 
-            createTaskToCompileTestClasses(variant)
-            createTaskToRunTestClasses(variant)
+            createTaskToCompileTestClasses(variant, variationName)
+            createTaskToRunTestClasses(variant, variationName)
         }
     }
 
-    void createTaskToRunTestClasses(variant) {
-        def variationName = variant.buildType.name.capitalize();
+    String getVariationName(variant) {
+        String buildTypeName = variant.buildType.name.capitalize()
+        String projectFlavorName = getFlavorNames(variant).join()
+        String variationName = "$projectFlavorName$buildTypeName"
+        variationName
+    }
+
+    ArrayList getFlavorNames(variant) {
+        def projectFlavorNames = variant.productFlavors.collect { it.name.capitalize() }
+        if (projectFlavorNames.isEmpty()) {
+            projectFlavorNames = [""]
+        }
+        projectFlavorNames
+    }
+
+    void setupPath(variant){
+        // Grab the task which outputs the merged manifest, resources, and assets for this flavor.
+        processedManifestPath = variant.outputs[0].processManifest.manifestOutputFile
+        processedResourcesPath = variant.mergeResources.outputDir
+        processedAssetsPath = variant.mergeAssets.outputDir
+    }
+
+    void setupClasses(variant) {
+        def robolectricConfiguration = project.getConfigurations().getByName('robolectricCompile')
+        testCompileClasspath = robolectricConfiguration.plus project.files(variant.javaCompile.destinationDir, variant.javaCompile.classpath)
+        // Even though testVariant is marked as Nullable, I haven't seen it being null at all.
+        if (variant.testVariant != null) {
+            testCompileClasspath.add project.files(variant.testVariant.variantData.variantConfiguration.compileClasspath)
+        } else {
+            testCompileClasspath.add robolectricConfiguration
+        }
+    }
+
+    void setupSources(variant, variationName) {
+        def javaConvention = project.convention.getPlugin(JavaPluginConvention)
+        variationSources = javaConvention.sourceSets.create "$TEST_TASK_NAME$variationName"
+        testDestinationDir = project.files("$project.buildDir/$TEST_CLASSES_DIR")
+        testRunClasspath = testCompileClasspath.plus testDestinationDir
+
+        ArrayList flavorNames = getFlavorNames(variant)
+        variationSources.java.setSrcDirs androidPlugin.getSourceDirs(["java"], flavorNames)
+        variationSources.resources.setSrcDirs androidPlugin.getSourceDirs(["res", "resources"], flavorNames)
+    }
+
+    void createTaskToCompileTestClasses(variant, variationName) {
+
+        testCompileTask = project.tasks.getByName variationSources.compileJavaTaskName
+        // Depend on the project compilation (which itself depends on the manifest processing task).
+        testCompileTask.dependsOn variant.javaCompile
+        testCompileTask.group = null
+        testCompileTask.description = null
+        testCompileTask.classpath = testCompileClasspath
+        testCompileTask.source = variationSources.java
+        testCompileTask.destinationDir = testDestinationDir.getSingleFile()
+        testCompileTask.options.bootClasspath = androidPlugin.plugin.getBootClasspath().join(File.pathSeparator)
+
+        if (variant.testVariant != null) {
+            def prepareTestTask = variant.testVariant.variantData.prepareDependenciesTask
+            if (prepareTestTask != null) {
+                getLogger().debug("prepareTestTask: " + prepareTestTask)
+                testCompileTask.dependsOn prepareTestTask
+            }
+        }
+        def javaConvention = project.convention.getPlugin(JavaPluginConvention)
+        def variationSources1 = javaConvention.sourceSets.getByName("$TEST_TASK_NAME$variationName")
+        // Clear out the group/description of the classes plugin so it's not top-level.
+        testClassesTaskPerVariation = project.tasks.getByName variationSources1.classesTaskName
+        testClassesTaskPerVariation.group = null
+        testClassesTaskPerVariation.description = null
+
+        // don't leave test resources behind
+        def processResourcesTask = project.tasks.getByName variationSources1.processResourcesTaskName
+        processResourcesTask.destinationDir = testDestinationDir.getSingleFile()
+    }
+
+    void createTaskToRunTestClasses(variant, variationName) {
+
         def taskRunName = "$TEST_TASK_NAME$variationName"
         def testRunTask = project.tasks.create(taskRunName, Test)
+
         testRunTask.dependsOn testClassesTaskPerVariation
         testRunTask.inputs.sourceFiles.from.clear()
         testRunTask.classpath = testRunClasspath
@@ -81,11 +154,11 @@ class TestTask extends TestReport {
         testRunTask.group = JavaBasePlugin.VERIFICATION_GROUP
         testRunTask.description = "Run unit tests for Build '$variationName'."
         testRunTask.reports.html.destination = project.file("$project.buildDir/$TEST_REPORT_DIR/$variant.dirName")
+
         def androidRuntime = androidPlugin.plugin.getBootClasspath().join(File.pathSeparator)
         testRunTask.classpath = testRunClasspath.plus project.files(androidRuntime)
 
-        // Set the applicationId as the packageName to avoid unknown resource errors when
-        // applicationIdSuffix is used.
+        // Set the applicationId as the packageName to avoid unknown resource errors when applicationIdSuffix is used.
         def applicationId = project.android.defaultConfig.applicationId
         if (applicationId != null) {
             testRunTask.systemProperties.put('android.package', applicationId)
@@ -113,74 +186,10 @@ class TestTask extends TestReport {
         if (!extension.excludePatterns.empty) {
             testRunTask.exclude(extension.excludePatterns)
         }
+
         testRunTask.ignoreFailures = extension.ignoreFailures
 
-        this.reportOn testRunTask
-    }
-
-    void createTaskToCompileTestClasses(variant) {
-        testCompileTask = project.tasks.getByName variationSources.compileJavaTaskName
-        // Depend on the project compilation (which itself depends on the manifest processing task).
-        getLogger().debug("javaCompile: " + variationSources.compileJavaTaskName)
-        testCompileTask.dependsOn javaCompile
-        testCompileTask.group = null
-        testCompileTask.description = null
-        testCompileTask.classpath = testCompileClasspath
-        testCompileTask.source = variationSources.java
-        testCompileTask.destinationDir = testDestinationDir.getSingleFile()
-        testCompileTask.options.bootClasspath = androidPlugin.plugin.getBootClasspath().join(File.pathSeparator)
-
-
-        if (testVariant != null) {
-            def prepareTestTask = testVariant.variantData.prepareDependenciesTask
-            if (prepareTestTask != null) {
-                getLogger().debug("prepareTestTask: " + prepareTestTask)
-                // Depend on the prepareDependenciesTask of the TestVariant to prepare the AAR dependencies
-                testCompileTask.dependsOn prepareTestTask
-            }
-        }
-        def variationName = variant.buildType.name.capitalize()
-        def javaConvention = project.convention.getPlugin(JavaPluginConvention)
-        def variationSources1 = javaConvention.sourceSets.getByName("$TEST_TASK_NAME$variationName")
-        // Clear out the group/description of the classes plugin so it's not top-level.
-        testClassesTaskPerVariation = project.tasks.getByName variationSources1.classesTaskName
-        testClassesTaskPerVariation.group = null
-        testClassesTaskPerVariation.description = null
-
-        // don't leave test resources behind
-        def processResourcesTask = project.tasks.getByName variationSources1.processResourcesTaskName
-        processResourcesTask.destinationDir = testDestinationDir.getSingleFile()
-    }
-
-    void setupSources(variationName) {
-        def javaConvention = project.convention.getPlugin(JavaPluginConvention)
-        variationSources = javaConvention.sourceSets.create "$TEST_TASK_NAME$variationName"
-        testDestinationDir = project.files("$project.buildDir/$TEST_CLASSES_DIR")
-        testRunClasspath = testCompileClasspath.plus testDestinationDir
-
-
-        variationSources.java.setSrcDirs androidPlugin.getSourceDirs(["java"], [""])
-        variationSources.resources.setSrcDirs androidPlugin.getSourceDirs(["res", "resources"], [""])
-    }
-
-    void setupClasses(variant) {
-        javaCompile = variant.javaCompile
-        testVariant = variant.testVariant
-        def robolectricConfiguration = project.getConfigurations().getByName('robolectricCompile')
-        testCompileClasspath = robolectricConfiguration.plus project.files(javaCompile.destinationDir, javaCompile.classpath)
-        // Even though testVariant is marked as Nullable, I haven't seen it being null at all.
-        if (testVariant != null) {
-            testCompileClasspath.add project.files(testVariant.variantData.variantConfiguration.compileClasspath)
-        } else {
-            testCompileClasspath.add project.configurations.getByName("robolectricCompile")
-        }
-    }
-
-    void setupPath(variant){
-        // Grab the task which outputs the merged manifest, resources, and assets for this flavor.
-        processedManifestPath = variant.outputs[0].processManifest.manifestOutputFile
-        processedResourcesPath = variant.mergeResources.outputDir
-        processedAssetsPath = variant.mergeAssets.outputDir
+        reportOn testRunTask
     }
 
     boolean checkAndroidVersion(String version) {

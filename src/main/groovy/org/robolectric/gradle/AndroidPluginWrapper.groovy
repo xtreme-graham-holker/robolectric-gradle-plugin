@@ -1,7 +1,6 @@
 package org.robolectric.gradle
 
 import com.android.build.gradle.AppPlugin
-import com.android.build.gradle.BasePlugin
 import com.android.build.gradle.LibraryPlugin
 import org.gradle.api.Project
 
@@ -47,8 +46,4 @@ class AndroidPluginWrapper {
         return dirs
     }
 
-    def getAndroidJarLocation() {
-        BasePlugin plugin = (BasePlugin) getPlugin()
-        return project.files("$plugin.sdkFolder/platforms/android-$plugin.extension.compileSdkVersion/android.jar")
-    }
 }
