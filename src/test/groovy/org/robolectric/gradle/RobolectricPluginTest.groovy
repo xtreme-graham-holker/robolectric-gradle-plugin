@@ -89,12 +89,11 @@ class RobolectricPluginTest {
     }
 
     @Test
-    @Ignore
     public void createsATaskCompilingFilesInDefaultLocation() {
         Project project = evaluatableProject()
         project.evaluate()
 
-        assertThat(project.tasks.compileTestDebugJava.source.files).containsOnly(project.file("src/androidTest/java/SomeTest.java"))
+        assertThat(project.tasks.compileTestDebugJava.source.files).containsOnly(project.file("src/test/java/SomeTest.java"))
     }
 
     @Test
@@ -291,7 +290,6 @@ class RobolectricPluginTest {
         }).isNotNull()
     }
 
-    @Ignore
     @Test
     public void ensureAarDependenciesOnClasspath() {
         Project project = evaluatableProject()
@@ -304,20 +302,23 @@ class RobolectricPluginTest {
         project.evaluate()
 
         assertThat(project.tasks.compileTestDebugJava.classpath.files.find {
-            it.absolutePath.contains("com.squareup.assertj${File.separator}assertj-android${File.separator}1.0.0${File.separator}classes.jar")
+            //it.absolutePath.contains("com.squareup.assertj${File.separator}assertj-android${File.separator}1.0.0${File.separator}classes.aar")
+            it.absolutePath.contains("assertj-android-1.0.0.aar")
         }).isNotNull()
     }
 
     @Test
     public void checkAndroidVersionTest() {
-        assertThat(RobolectricPlugin.checkAndroidVersion('0.6.0')).isFalse()
-        assertThat(RobolectricPlugin.checkAndroidVersion('0.8.0')).isFalse()
-        assertThat(RobolectricPlugin.checkAndroidVersion('0.12.+')).isFalse()
-        assertThat(RobolectricPlugin.checkAndroidVersion('0.13.1')).isFalse()
+        Project project = evaluatableProject()
+        RobolectricTestTask robolectricTestTask =  project.tasks.getByName('robolectricTest')
+        assertThat(robolectricTestTask.checkAndroidVersion('0.6.0')).isFalse()
+        assertThat(robolectricTestTask.checkAndroidVersion('0.8.0')).isFalse()
+        assertThat(robolectricTestTask.checkAndroidVersion('0.12.+')).isFalse()
+        assertThat(robolectricTestTask.checkAndroidVersion('0.13.1')).isFalse()
 
-        assertThat(RobolectricPlugin.checkAndroidVersion('0.14.+')).isTrue()
-        assertThat(RobolectricPlugin.checkAndroidVersion('0.14.0')).isTrue()
-        assertThat(RobolectricPlugin.checkAndroidVersion('1.0.0-rc1')).isTrue()
+        assertThat(robolectricTestTask.checkAndroidVersion('0.14.+')).isTrue()
+        assertThat(robolectricTestTask.checkAndroidVersion('0.14.0')).isTrue()
+        assertThat(robolectricTestTask.checkAndroidVersion('1.0.0-rc1')).isTrue()
     }
 
     @Test(expected = ProjectConfigurationException.class)

@@ -53,7 +53,8 @@ class RobolectricTestTask extends TestReport {
             }
 
             if (androidGradlePlugin != null) {
-                checkAndroidVersion(androidGradlePlugin.version)
+                if (!checkAndroidVersion(androidGradlePlugin.version))
+                    throw new IllegalStateException("The Android Gradle plugin ${androidGradlePlugin.version} is not supported.")
             }
 
             String variationName = getVariationName(variant)
@@ -223,7 +224,7 @@ class RobolectricTestTask extends TestReport {
             logger.warn("The Android Gradle plugin ${version} is not supported.")
             return true
         } else {
-            throw new IllegalStateException("The Android Gradle plugin ${version} is not supported.")
+            return false
         }
     }
 
