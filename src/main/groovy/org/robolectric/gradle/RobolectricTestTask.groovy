@@ -107,6 +107,7 @@ class RobolectricTestTask extends TestReport {
         testRunClasspath = testCompileClasspath.plus testDestinationDir
 
         ArrayList flavorNames = getFlavorNames(variant)
+
         variationSources.java.setSrcDirs getSourceDirs(["java"], flavorNames)
         variationSources.resources.setSrcDirs getSourceDirs(["res", "resources"], flavorNames)
     }
@@ -124,7 +125,7 @@ class RobolectricTestTask extends TestReport {
 
             projectFlavorNames.each { flavor ->
                 if (flavor) {
-                    dirs.add(sourceDir + flavor + File.separator + sourceType)
+                    dirs.add(new File(sourceDir + flavor + File.separator + sourceType))
                 }
             }
         }
