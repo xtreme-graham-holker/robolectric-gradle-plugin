@@ -1,5 +1,9 @@
 package org.robolectric.gradle
 
+import com.android.build.gradle.api.AndroidSourceSet
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
+
 class RobolectricTestExtension {
     private long forkEvery
     private int maxParallelForks = 1
@@ -12,6 +16,7 @@ class RobolectricTestExtension {
     boolean ignoreVersionCheck
 
     String sourceDir
+    SourceSetContainer sourceSets
 
     int getMaxParallelForks() {
         return maxParallelForks
@@ -66,4 +71,26 @@ class RobolectricTestExtension {
     void sourceDir(String sourceDir) {
         this.sourceDir = sourceDir
     }
+
+    SourceSetContainer getSourceSets() {
+        return sourceSets
+    }
+
+    void sourceSets(Closure closure) {
+        this.sourceSets = sourceSets
+    }
+
+
 }
+
+//sourceSets {
+//    main {
+//        java {
+//            srcDir 'src/java'
+//        }
+//    }
+//}
+
+//class RoboSourceSets {
+//    String main
+//}

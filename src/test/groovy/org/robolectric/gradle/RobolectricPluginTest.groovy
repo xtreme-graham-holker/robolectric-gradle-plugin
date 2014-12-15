@@ -405,7 +405,11 @@ class RobolectricPluginTest {
         }
 
         project.robolectric {
-            sourceDir "src/test/java"
+            sourceSets {
+                test {
+                    java.srcDir file('src/java')
+                }
+            }
         }
 
         project.evaluate()

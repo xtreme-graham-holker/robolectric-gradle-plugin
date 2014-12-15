@@ -109,8 +109,8 @@ class RobolectricTestTask extends TestReport {
 
         ArrayList flavorNames = getFlavorNames(variant)
 
-        variationSources.java.setSrcDirs getSourceDirs(["java"], flavorNames)
-        variationSources.resources.setSrcDirs getSourceDirs(["res", "resources"], flavorNames)
+        variationSources.java.setSrcDirs getSourceDirs2(["java"], flavorNames)
+        //variationSources.resources.setSrcDirs getSourceDirs2(["res", "resources"], flavorNames)
     }
 
     def getSourceDirs(List<String> sourceTypes, List<String> projectFlavorNames) {
@@ -129,6 +129,24 @@ class RobolectricTestTask extends TestReport {
                     dirs.add(new File(sourceDir + flavor + File.separator + sourceType))
                 }
             }
+        }
+        return dirs
+    }
+
+    def getSourceDirs2(List<String> sourceTypes, List<String> projectFlavorNames) {
+        def dirs = []
+        sourceTypes.each { sourceType ->
+            project.robolectric.sourceSets.test[sourceType].srcDirs.each { testDir ->
+                dirs.add(testDir)
+            }
+            projectFlavorNames.each { flavor ->
+                if (flavor) {
+                    dirs.addAll(project.robolectric.sourceSets["test$flavor"][sourceType].srcDirs)
+                }
+            }
+        }
+        if (dirs.empty){
+            dirs.add(project.file(project.projectDir + '/src/test/java'))
         }
         return dirs
     }
