@@ -4,6 +4,7 @@ import org.gradle.api.Task
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.tasks.DefaultSourceSet
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.plugins.JavaPluginConvention
@@ -141,7 +142,8 @@ class RobolectricTestTask extends TestReport {
             }
             projectFlavorNames.each { flavor ->
                 if (flavor) {
-                    dirs.addAll(project.robolectric.sourceSets["test$flavor"][sourceType].srcDirs)
+                    dirs.add(project.robolectric.sourceSets.test[sourceType].srcDirs + flavor)
+
                 }
             }
         }

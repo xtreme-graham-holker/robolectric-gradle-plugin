@@ -99,7 +99,14 @@ class RobolectricPluginTest {
     @Test
     public void createsATaskCompilingFilesInCustomLocation() {
         Project project = evaluatableProject()
-        project.robolectric.sourceDir = 'customTestFolder/src'
+        //project.robolectric.sourceDir = 'customTestFolder/src'
+        project.robolectric {
+            sourceSets {
+                test {
+                    java.srcDir file('customTestFolder/src')
+                }
+            }
+        }
         project.evaluate()
 
         assertThat(project.tasks.compileTestDebugJava.source.files).containsOnly(project.file("customTestFolder/src/java/SomeTest.java"))
@@ -414,10 +421,6 @@ class RobolectricPluginTest {
 
         project.evaluate()
 
-//        Task testRoboDebugJavaTask = project.tasks.getByName('compileDebugTestJava')
-//        assertThat(testRoboDebugJavaTask.properties.values()  )
-//                .isEqualToIgnoringCase("whatever")
-//
 //        org.gradle.api.tasks.testing.Test task = project.tasks.getByName("testDebug")
 //        assertThat(task.classpath.getAsPath())
 //            .isEqualToIgnoringCase("whatever")
