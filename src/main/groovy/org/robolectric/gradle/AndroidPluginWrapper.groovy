@@ -1,6 +1,7 @@
 package org.robolectric.gradle
 
 import com.android.build.gradle.AppPlugin
+import com.android.build.gradle.BasePlugin
 import com.android.build.gradle.LibraryPlugin
 import org.gradle.api.Project
 
@@ -26,11 +27,9 @@ class AndroidPluginWrapper {
         return project.android.applicationVariants
     }
 
-    def getPlugin() {
+    BasePlugin getPlugin() {
         if (hasLibPlugin) return project.plugins.find { p -> p instanceof LibraryPlugin }
         return project.plugins.find { p -> p instanceof AppPlugin }
     }
-
-
 
 }

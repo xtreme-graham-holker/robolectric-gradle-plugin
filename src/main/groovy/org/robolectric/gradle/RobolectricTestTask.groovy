@@ -1,13 +1,16 @@
 package org.robolectric.gradle
 
+import com.android.build.gradle.api.BaseVariant
+import com.android.builder.model.ArtifactMetaData
+import com.android.builder.model.SourceProvider
 import org.gradle.api.Task
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.tasks.DefaultSourceSet
-import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.plugins.JavaPluginConvention
+import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.testing.TestReport
 
@@ -66,7 +69,84 @@ class RobolectricTestTask extends TestReport {
 
             createTaskToCompileTestClasses(variant, variationName)
             createTaskToRunTestClasses(variant, variationName)
+            addArtifact(variationName, variant);
         }
+    }
+
+    static class RoboSourceProvider implements SourceProvider {
+
+        SourceSet sourceSet;
+
+        public RoboSourceProvider(SourceSet set) {
+            sourceSet = set;
+        }
+
+        @Override
+        String getName() {
+            return null
+        }
+
+        @Override
+        File getManifestFile() {
+            return null
+        }
+
+        @Override
+        Collection<File> getJavaDirectories() {
+            return sourceSet.allJava.files
+        }
+
+        @Override
+        Collection<File> getResourcesDirectories() {
+            return null
+        }
+
+        @Override
+        Collection<File> getAidlDirectories() {
+            return null
+        }
+
+        @Override
+        Collection<File> getRenderscriptDirectories() {
+            return null
+        }
+
+        @Override
+        Collection<File> getCDirectories() {
+            return null
+        }
+
+        @Override
+        Collection<File> getCppDirectories() {
+            return null
+        }
+
+        @Override
+        Collection<File> getResDirectories() {
+            return null
+        }
+
+        @Override
+        Collection<File> getAssetsDirectories() {
+            return null
+        }
+
+        @Override
+        Collection<File> getJniLibsDirectories() {
+            return null
+        }
+    }
+
+    void addArtifact(String variationName, BaseVariant variant) {
+        println("variant name: " + variant.name);
+        def roboConfig = project.getConfigurations().getByName('robolectricCompile')
+        def name = variationName + "Artifact"
+        androidPlugin.plugin.registerArtifactType(name, true, ArtifactMetaData.TYPE_JAVA)
+        androidPlugin.plugin.registerJavaArtifact(name, variant, variant.assemble.name, variant.javaCompile.name, roboConfig, variant.javaCompile.destinationDir, new RoboSourceProvider(variationSources))
+
+//        JavaPlugin plugin = project.getPlugins().findPlugin(JavaPlugin.class);
+//        JavaPluginConvention convention = project.convention.getPlugin(JavaPluginConvention.class);
+//        convention.getSourceSets().add
     }
 
     String getVariationName(variant) {
@@ -105,7 +185,7 @@ class RobolectricTestTask extends TestReport {
     void setupSources(variant, variationName) {
         def javaConvention = project.convention.getPlugin(JavaPluginConvention)
         variationSources = javaConvention.sourceSets.create "$TEST_TASK_NAME$variationName"
-        testDestinationDir = project.files("$project.buildDir/$TEST_CLASSES_DIR")
+        testDestinationDir = project.files("$project.buildDir/intermediates/$TEST_CLASSES_DIR")
         testRunClasspath = testCompileClasspath.plus testDestinationDir
 
         ArrayList flavorNames = getFlavorNames(variant)

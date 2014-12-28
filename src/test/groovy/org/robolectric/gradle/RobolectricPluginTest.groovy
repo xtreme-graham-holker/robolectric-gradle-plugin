@@ -1,10 +1,12 @@
 package org.robolectric.gradle
 
+import com.android.build.gradle.AppPlugin
+import com.android.builder.model.JavaArtifact
 import com.google.common.io.Files
 import org.gradle.api.Action
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.ProjectConfigurationException
+import org.gradle.api.Task
 import org.gradle.api.internal.plugins.PluginApplicationException
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.Ignore
@@ -317,7 +319,7 @@ class RobolectricPluginTest {
     @Test
     public void checkAndroidVersionTest() {
         Project project = evaluatableProject()
-        RobolectricTestTask robolectricTestTask =  project.tasks.getByName('robolectricTest')
+        RobolectricTestTask robolectricTestTask = project.tasks.getByName('robolectricTest')
         assertThat(robolectricTestTask.checkAndroidVersion('0.6.0')).isFalse()
         assertThat(robolectricTestTask.checkAndroidVersion('0.8.0')).isFalse()
         assertThat(robolectricTestTask.checkAndroidVersion('0.12.+')).isFalse()
@@ -363,7 +365,7 @@ class RobolectricPluginTest {
             action.execute(project.tasks.initGradleTest)
         }
         assertThat(new File("src/test/fixtures/android_app/test.iml"))
-            .hasContentEqualTo(new File("src/test/resources/test-expected.iml"))
+                .hasContentEqualTo(new File("src/test/resources/test-expected.iml"))
     }
 
     private Project evaluatableProject() {
@@ -394,7 +396,7 @@ class RobolectricPluginTest {
         project.apply plugin: 'robolectric'
         project.android {
             compileSdkVersion 21
-            buildToolsVersion '21.1.1'
+            buildToolsVersion '21.1.2'
         }
         return project
     }
@@ -408,7 +410,7 @@ class RobolectricPluginTest {
         project.apply plugin: 'robolectric'
         project.android {
             compileSdkVersion 21
-            buildToolsVersion '21.1.1'
+            buildToolsVersion '21.1.2'
         }
 
         project.robolectric {
@@ -421,9 +423,33 @@ class RobolectricPluginTest {
 
         project.evaluate()
 
-//        org.gradle.api.tasks.testing.Test task = project.tasks.getByName("testDebug")
-//        assertThat(task.classpath.getAsPath())
-//            .isEqualToIgnoringCase("whatever")
+        AppPlugin plugin = project.plugins.findPlugin(AppPlugin.class)
+
+        assertThat(plugin.extraArtifacts)
+                .hasSize(2)
+
+
+
+        def artifacts = plugin.getExtraJavaArtifacts("debug")
+        assertThat(artifacts)
+                .hasSize(1)
+
+
+        JavaArtifact debugArtifact = artifacts.first()
+        assertThat(debugArtifact.assembleTaskName)
+                .isEqualTo("assembleDebug")
+
+        assertThat(debugArtifact.classesFolder.toString())
+                .endsWith("src/test/fixtures/android_app/build/intermediates/classes/debug")
+
+        assertThat(debugArtifact.compileTaskName)
+                .isEqualTo("compileDebugJava")
+
+        assertThat(debugArtifact.variantSourceProvider.javaDirectories)
+            .hasSize(1)
+
+        assertThat(debugArtifact.variantSourceProvider.javaDirectories.getAt(0).toString())
+            .endsWith("/src/test/java/SomeTest.java")
 
         System.out.println("test")
     }
